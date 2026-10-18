@@ -1,0 +1,28 @@
+[Unit]
+Description=AI Learning Bot (Feishu private chat)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ai-learning-bot
+Group=ai-learning-bot
+WorkingDirectory=/opt/ai-learning-bot
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=DATA_DIR=/var/lib/ai-learning-bot
+EnvironmentFile=/etc/ai-learning-bot/bot.env
+ExecStart=/opt/ai-learning-bot/.venv/bin/python /opt/ai-learning-bot/bot.py
+Restart=always
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/ai-learning-bot
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
