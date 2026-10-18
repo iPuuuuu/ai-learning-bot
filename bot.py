@@ -165,7 +165,7 @@ class LearningBot:
         if open_id != self.store.recipient() or open_id != settings.allowed_open_id:
             return
         async with self.lock:
-            if daily_date and self.store.daily_status(open_id, daily_date):
+            if daily_date and not self.store.reserve_daily(open_id, daily_date, None):
                 return
             if not daily_date:
                 await self.send("正在按你的学习画像挑选并阅读文章，请稍等……", open_id)
@@ -197,8 +197,10 @@ class LearningBot:
             data["doc_url"] = doc["url"]
             article_id = self.store.save_article(data, guide, set_current=False)
             saved = self.store.article(article_id)
-            if daily_date and not self.store.reserve_daily(open_id, daily_date, article_id):
-                return
+            if daily_date:
+                self.store.set_daily_article(open_id, daily_date, article_id)
+                if not self.store.start_daily_send(open_id, daily_date):
+                    return
             self.store.set_current_article(article_id)
             try:
                 await self.transport.send_card("📚 今日 AI 学习", self._card(saved), open_id, article_id)
@@ -278,7 +280,10 @@ class LearningBot:
             await self.recommend(open_id, local.date().isoformat())
         except Exception as exc:
             # A reserved send is unknown; future loop iterations must not blindly resend it.
-            log.warning("daily recommendation failed: %s", type(exc).__name__)
+            if self.store.daily_status(open_id, local.date().isoformat()) == "preparing":
+                log.warning("daily preparation failed: %s", type(exc).__name__)
+            else:
+                log.warning("daily recommendation failed: %s", type(exc).__name__)
 
     async def daily_loop(self) -> None:
         while True:
